@@ -1,0 +1,533 @@
+import React, { useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { colors } from '../styles/colors';
+import { Card } from '../components/Card';
+import { mockComplaints } from '../utils/mockData';
+import { 
+  BellIcon, 
+  FileTextIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  UsersIcon,
+  LayersIcon
+} from '../components/icons';
+
+export const AdminDashboard = () => {
+  const [complaints] = useState(mockComplaints);
+  const [activeTab, setActiveTab] = useState('in-progress'); // 'in-progress' or 'completed'
+
+  const stats = {
+    total: complaints.length,
+    pending: complaints.filter(c => c.status === 'in-progress').length,
+    completed: complaints.filter(c => c.status === 'completed').length
+  };
+  
+  // Group complaints by department
+  const departmentGroups = complaints.reduce((acc, complaint) => {
+    // Get department from the complaint
+    const department = complaint.department || 'General';
+    
+    if (!acc[department]) {
+      acc[department] = [];
+    }
+    acc[department].push(complaint);
+    return acc;
+  }, {});
+
+  // Filter complaints based on the active tab
+  const displayedComplaints = complaints.filter(c => c.status === activeTab);
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getStatusColor = (status) => {
+    return status === 'completed' ? colors.success : colors.accent;
+  };
+
+  const getStatusText = (status) => {
+    return status === 'completed' ? 'Completed' : 'Pending';
+  };
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Admin Dashboard</Text>
+        <BellIcon size={24} color={colors.text} />
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Statistics Cards */}
+        <View style={styles.statsContainer}>
+          <Card style={styles.statCard}>
+            <FileTextIcon size={32} color={colors.primary} />
+            <Text style={styles.statNumber}>{stats.total}</Text>
+            <Text style={styles.statLabel}>Total Complaints</Text>
+          </Card>
+          <Card style={styles.statCard}>
+            <ClockIcon size={32} color={colors.accent} />
+            <Text style={styles.statNumber}>{stats.pending}</Text>
+            <Text style={styles.statLabel}>Pending</Text>
+          </Card>
+          <Card style={styles.statCard}>
+            <CheckCircleIcon size={32} color={colors.success} />
+            <Text style={styles.statNumber}>{stats.completed}</Text>
+            <Text style={styles.statLabel}>Completed</Text>
+          </Card>
+        </View>
+
+        {/* Department Statistics */}
+        <Card style={styles.departmentCard}>
+          <View style={styles.departmentHeader}>
+            <LayersIcon size={24} color={colors.primary} />
+            <Text style={styles.departmentTitle}>Department Overview</Text>
+          </View>
+          
+          {Object.entries(departmentGroups).map(([department, deptComplaints]) => {
+            const pending = deptComplaints.filter(c => c.status === 'in-progress').length;
+            const completed = deptComplaints.filter(c => c.status === 'completed').length;
+            
+            return (
+              <View key={department} style={styles.departmentRow}>
+                <View style={styles.departmentInfo}>
+                  <Text style={styles.departmentName}>{department}</Text>
+                  <Text style={styles.departmentCount}>Total: {deptComplaints.length}</Text>
+                </View>
+                
+                <View style={styles.statusBadges}>
+                  <View style={styles.badgeContainer}>
+                    <View style={[styles.statusDot, { backgroundColor: colors.accent }]} />
+                    <Text style={styles.statusCount}>{pending}</Text>
+                  </View>
+                  
+                  <View style={styles.badgeContainer}>
+                    <View style={[styles.statusDot, { backgroundColor: colors.success }]} />
+                    <Text style={styles.statusCount}>{completed}</Text>
+                  </View>
+                </View>
+              </View>
+            );
+          })}
+        </Card>
+
+        {/* Complaint Tabs */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[
+              styles.tabButton,
+              activeTab === 'in-progress' && styles.activeTabButton
+            ]}
+            onPress={() => setActiveTab('in-progress')}
+          >
+            <ClockIcon 
+              size={20} 
+              color={activeTab === 'in-progress' ? colors.white : colors.textSecondary} 
+            />
+            <Text style={[
+              styles.tabButtonText,
+              activeTab === 'in-progress' && styles.activeTabButtonText
+            ]}>
+              In Progress
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[
+              styles.tabButton,
+              activeTab === 'completed' && styles.activeTabButton
+            ]}
+            onPress={() => setActiveTab('completed')}
+          >
+            <CheckCircleIcon 
+              size={20} 
+              color={activeTab === 'completed' ? colors.white : colors.textSecondary} 
+            />
+            <Text style={[
+              styles.tabButtonText,
+              activeTab === 'completed' && styles.activeTabButtonText
+            ]}>
+              Completed
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Complaints List */}
+        <Card>
+          <View style={styles.complaintsList}>
+            {displayedComplaints.length > 0 ? (
+              displayedComplaints.map((complaint, index) => (
+                <View key={complaint.id} style={[
+                  styles.adminComplaintRow,
+                  index !== displayedComplaints.length - 1 && styles.borderBottom
+                ]}>
+                  <View style={styles.adminComplaintInfo}>
+                    <View style={styles.complaintHeader}>
+                      <Text style={styles.adminComplaintId}>
+                        #{complaint.id.toString().padStart(4, '0')}
+                      </Text>
+                      <View style={[
+                        styles.adminStatusBadge, 
+                        { backgroundColor: activeTab === 'in-progress' ? colors.accent : colors.success }
+                      ]}>
+                        <Text style={styles.adminStatusText}>
+                          {activeTab === 'in-progress' ? 'Pending' : 'Completed'}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    <Text style={styles.adminComplaintTitle}>{complaint.title}</Text>
+                    <Text style={styles.adminComplaintLocation}>{complaint.location}</Text>
+                    <Text style={styles.departmentTag}>{complaint.department || 'General'}</Text>
+                    
+                    {/* Additional details */}
+                    <View style={styles.adminComplaintDetails}>
+                      <View style={styles.detailGroup}>
+                        <Text style={styles.detailLabel}>Reported by:</Text>
+                        <Text style={styles.detailValue}>{complaint.userId.split('@')[0]}</Text>
+                      </View>
+                      <View style={styles.detailGroup}>
+                        <Text style={styles.detailLabel}>Reported on:</Text>
+                        <Text style={styles.detailValue}>{formatDate(complaint.submittedAt)}</Text>
+                      </View>
+                      {complaint.assignedAt && (
+                        <View style={styles.detailGroup}>
+                          <Text style={styles.detailLabel}>Assigned on:</Text>
+                          <Text style={styles.detailValue}>{formatDate(complaint.assignedAt)}</Text>
+                        </View>
+                      )}
+                      {complaint.completedAt && (
+                        <View style={styles.detailGroup}>
+                          <Text style={styles.detailLabel}>Completed on:</Text>
+                          <Text style={styles.detailValue}>{formatDate(complaint.completedAt)}</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </View>
+              ))
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>
+                  No {activeTab === 'in-progress' ? 'pending' : 'completed'} complaints found
+                </Text>
+              </View>
+            )}
+          </View>
+        </Card>
+
+        {/* Summary Analytics */}
+        <Card>
+          <Text style={styles.sectionTitle}>Analytics Overview</Text>
+          <View style={styles.analyticsContainer}>
+            <View style={styles.analyticsRow}>
+              <Text style={styles.analyticsLabel}>Completion Rate:</Text>
+              <Text style={styles.analyticsValue}>
+                {stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0}%
+              </Text>
+            </View>
+            <View style={styles.analyticsRow}>
+              <Text style={styles.analyticsLabel}>Average Resolution Time:</Text>
+              <Text style={styles.analyticsValue}>2.5 hours</Text>
+            </View>
+            <View style={styles.analyticsRow}>
+              <Text style={styles.analyticsLabel}>Most Common Issue:</Text>
+              <Text style={styles.analyticsValue}>Electrical</Text>
+            </View>
+            <View style={styles.analyticsRow}>
+              <Text style={styles.analyticsLabel}>Most Active Department:</Text>
+              <Text style={styles.analyticsValue}>IT</Text>
+            </View>
+          </View>
+        </Card>
+      </ScrollView>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+    backgroundColor: colors.surface,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  content: {
+    flex: 1,
+    padding: 16,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  statCard: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    marginHorizontal: 4,
+  },
+  statNumber: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginTop: 8,
+    color: colors.text,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 16,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  filterButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  filterButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: colors.backgroundLight,
+  },
+  activeFilterButton: {
+    backgroundColor: colors.primary,
+  },
+  filterButtonText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  activeFilterButtonText: {
+    color: colors.white,
+    fontWeight: '500',
+  },
+  complaintsList: {
+    marginTop: 8,
+  },
+  borderBottom: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  adminComplaintRow: {
+    paddingVertical: 16,
+  },
+  adminComplaintInfo: {
+    gap: 8,
+  },
+  complaintHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  adminComplaintId: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  adminStatusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 16,
+  },
+  adminStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  adminComplaintTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  adminComplaintLocation: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 8,
+  },
+  adminComplaintDetails: {
+    gap: 6,
+  },
+  detailGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginRight: 4,
+    width: 100,
+  },
+  detailValue: {
+    fontSize: 14,
+    color: colors.text,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 24,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  analyticsContainer: {
+    gap: 12,
+  },
+  analyticsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  analyticsLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  analyticsValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  sectionHeaderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sectionBadge: {
+    backgroundColor: colors.accent,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  sectionBadgeText: {
+    color: colors.white,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  departmentTag: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: '500',
+    marginTop: 4,
+  },
+  departmentCard: {
+    marginBottom: 24,
+  },
+  departmentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  departmentTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  departmentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  departmentInfo: {
+    flex: 1,
+  },
+  departmentName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  departmentCount: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  statusBadges: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  statusCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  tabButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    paddingVertical: 15,
+    gap: 8,
+  },
+  activeTabButton: {
+    backgroundColor: colors.primary,
+  },
+  tabButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  activeTabButtonText: {
+    color: colors.white,
+  },
+});
